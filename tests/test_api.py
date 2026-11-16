@@ -37,3 +37,37 @@ def test_mark_done(client):
 
 def test_not_found(client):
     assert client.patch("/tasks/999", json={"done": True}).status_code == 404
+
+
+def test_delete_task(client):
+    # Cria uma tarefa
+    response = client.post("/tasks", json={"title": "Tarefa para excluir"})
+    assert response.status_code == 201
+
+    task_id = response.get_json()["id"]
+
+    # Exclui a tarefa criada
+    response = client.delete(f"/tasks/{task_id}")
+
+    # Verifica se a exclusão funcionou
+    assert response.status_code == 204
+    assert response.data == b""
+
+    # Confirma que a tarefa não aparece mais na lista
+    response = client.get("/tasks")
+    tasks = response.get_json()
+
+    assert all(task["id"] != task_id for task in tasks)
+
+
+def test_delete_task_not_found(client):
+    response = client.delete("/tasks/999999")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "tarefa nao encontrada"
+    
+def test_version(client):
+    response = client.get("/version")
+
+    assert response.status_code == 200
+    assert response.get_json()["version"] == "1.0.0"
