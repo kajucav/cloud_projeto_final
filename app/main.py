@@ -56,19 +56,48 @@ def create_app(test_config=None):
             task_id = cursor.lastrowid
         return jsonify(id=task_id, title=title, done=False), 201
 
+
     @app.patch("/tasks/<int:task_id>")
     def update_task(task_id):
         data = request.get_json(silent=True)
         if not isinstance(data, dict) or type(data.get("done")) is not bool:
             return jsonify(error="done deve ser booleano"), 400
+
         with connect() as db:
-            cursor = db.execute("UPDATE tasks SET done=? WHERE id=?", (int(data["done"]), task_id))
+            cursor = db.execute(
+                "UPDATE tasks SET done=? WHERE id=?",
+                (int(data["done"]), task_id)
+            )
             db.commit()
+
         if not cursor.rowcount:
             return jsonify(error="tarefa nao encontrada"), 404
+
         return jsonify(id=task_id, done=data["done"]), 200
+
+    @app.delete("/tasks/<int:task_id>")
+    def delete_task(task_id):
+        with connect() as db:
+            cursor = db.execute(
+                "DELETE FROM tasks WHERE id=?",
+                (task_id,)
+            )
+            db.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify(error="tarefa nao encontrada"), 404
+
+        return "", 204
+    
+    @app.get("/version")
+    def version():
+        return jsonify(
+            service="cloud-tasks-api",
+            version="1.0.0"
+        ), 200
 
     return app
 
 
 app = create_app()
+
